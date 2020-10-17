@@ -15,7 +15,7 @@ import br.com.caelum.leilao.dominio.Lance;
 import br.com.caelum.leilao.dominio.Leilao;
 import br.com.caelum.leilao.dominio.Usuario;
 
-public class LeilaoDao {
+public class LeilaoDao implements RepositorioDeLeiloes {
 
 	private Connection conexao;
 
@@ -132,4 +132,6 @@ public class LeilaoDao {
 	}
 	
 	public int x() { return 10; }
+	
+	public static String teste() { return "teste"; }
 }
