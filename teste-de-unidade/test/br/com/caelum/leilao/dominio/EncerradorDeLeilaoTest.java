@@ -46,13 +46,13 @@ public class EncerradorDeLeilaoTest {
 		
 		final CriadorDeLeilao criadorDeLeilao = new CriadorDeLeilao();
 		leilaoCarroSemanaPassada = criadorDeLeilao
-				.para("Carro").naData(semanaPassada).constroi();
+				.para("L1").naData(semanaPassada).constroi();
 		leilaoGeladeiraSemanaPassada = criadorDeLeilao
-				.para("Geladeira").naData(semanaPassada).constroi();
+				.para("L2").naData(semanaPassada).constroi();
 		leilaoCarroOntem = criadorDeLeilao
-				.para("Carro").naData(ontem).constroi();
+				.para("L3").naData(ontem).constroi();
 		leilaoGeladeiraOntem = criadorDeLeilao
-				.para("Geladeira").naData(ontem).constroi();
+				.para("L4").naData(ontem).constroi();
 		
 		daoMock = mock(RepositorioDeLeiloes.class);
 		emailMock = mock(EnviadorDeEmail.class);
