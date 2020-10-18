@@ -88,7 +88,7 @@ public class LeilaoDao implements RepositorioDeLeiloes {
 			while(rs.next()) {
 				Leilao leilao = new Leilao(rs.getString("descricao"), data(rs.getDate("data")));
 				leilao.setId(rs.getInt("id"));
-				if(rs.getBoolean("encerrado")) leilao.encerra();
+				leilao.setEncerrado(rs.getBoolean("encerrado"));
 				
 				String sql2 = "SELECT VALOR, NOME, U.ID AS USUARIO_ID, L.ID AS LANCE_ID FROM LANCES L INNER JOIN USUARIO U ON U.ID = L.USUARIO_ID WHERE LEILAO_ID = " + rs.getInt("id");
 				PreparedStatement ps2 = conexao.prepareStatement(sql2);
@@ -132,6 +132,4 @@ public class LeilaoDao implements RepositorioDeLeiloes {
 	}
 	
 	public int x() { return 10; }
-	
-	public static String teste() { return "teste"; }
 }

@@ -3,19 +3,26 @@ package br.com.caelum.leilao.dominio;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.InOrder;
+import org.mockito.Mockito;
 
 import br.com.caelum.leilao.builder.CriadorDeLeilao;
 import br.com.caelum.leilao.infra.dao.RepositorioDeLeiloes;
+import br.com.caelum.leilao.infra.email.EnviadorDeEmail;
 import br.com.caelum.leilao.servico.EncerradorDeLeilao;
 
 public class EncerradorDeLeilaoTest {
@@ -27,6 +34,8 @@ public class EncerradorDeLeilaoTest {
 	private Leilao leilaoGeladeiraOntem;
 	
 	private RepositorioDeLeiloes daoMock;
+	private EnviadorDeEmail emailMock;
+	private EncerradorDeLeilao encerrador;
 	
 	@Before
 	public void before() {
@@ -46,14 +55,13 @@ public class EncerradorDeLeilaoTest {
 				.para("Geladeira").naData(ontem).constroi();
 		
 		daoMock = mock(RepositorioDeLeiloes.class);
+		emailMock = mock(EnviadorDeEmail.class);
+		encerrador = new EncerradorDeLeilao(daoMock, emailMock);
 	}
 	
 	@Test
 	public void deveEncerrarLeiloesCriadosAUmaSemana() {
-		List<Leilao> leiloesLista = Arrays.asList(leilaoCarroSemanaPassada, leilaoGeladeiraSemanaPassada);
-		when(daoMock.correntes()).thenReturn(leiloesLista);
-		
-		final EncerradorDeLeilao encerrador = new EncerradorDeLeilao(daoMock);
+		when(daoMock.correntes()).thenReturn(Arrays.asList(leilaoCarroSemanaPassada, leilaoGeladeiraSemanaPassada));
 		encerrador.encerra();
 		
 		assertEquals(2, encerrador.getTotalEncerrados());
@@ -62,11 +70,8 @@ public class EncerradorDeLeilaoTest {
 	}
 	
 	@Test
-	public void naoDeveEncerrarLeilaoCriadoOntem() {
-		List<Leilao> leiloesLista = Arrays.asList(leilaoCarroOntem, leilaoGeladeiraOntem);
-		when(daoMock.correntes()).thenReturn(leiloesLista);
-		
-		final EncerradorDeLeilao encerrador = new EncerradorDeLeilao(daoMock);
+	public void naoDeveEncerrarLeilaoCriadoAMenosDeUmaSemana() {
+		when(daoMock.correntes()).thenReturn(Arrays.asList(leilaoCarroOntem, leilaoGeladeiraOntem));
 		encerrador.encerra();
 		
 		assertEquals(0, encerrador.getTotalEncerrados());
@@ -77,11 +82,74 @@ public class EncerradorDeLeilaoTest {
 	@Test
 	public void naoDeveRealizarAcoesQuandoNaoExistirLeiloesCorrentes() {
 		when(daoMock.correntes()).thenReturn(new ArrayList<Leilao>());
-		
-		final EncerradorDeLeilao encerrador = new EncerradorDeLeilao(daoMock);
 		encerrador.encerra();
 		
 		assertEquals(0, encerrador.getTotalEncerrados());
+		verify(daoMock, never()).atualiza(any(Leilao.class));
+		verify(emailMock, never()).envia(any(Leilao.class));
+	}
+	
+	@Test
+	public void deveAtualizarBancoEEnviarEmailAoEncerrarLeilao() {
+		when(daoMock.correntes()).thenReturn(Arrays.asList(leilaoCarroSemanaPassada));
+		encerrador.encerra();
+		
+		InOrder inOrder = Mockito.inOrder(daoMock, emailMock);
+		
+		assertEquals(1, encerrador.getTotalEncerrados());
+		assertTrue(leilaoCarroSemanaPassada.isEncerrado());
+		inOrder.verify(daoMock, times(1)).atualiza(any(Leilao.class));
+		inOrder.verify(emailMock, times(1)).envia(any(Leilao.class));
+	}
+	
+	@Test
+    public void naoDeveEncerrarLeiloesQueComecaramMenosDeUmaSemanaAtras() {
+        when(daoMock.correntes()).thenReturn(Arrays.asList(leilaoCarroOntem, leilaoGeladeiraOntem));
+        encerrador.encerra();
+
+        assertEquals(0, encerrador.getTotalEncerrados());
+        assertFalse(leilaoCarroOntem.isEncerrado());
+        assertFalse(leilaoGeladeiraOntem.isEncerrado());
+        verify(daoMock, never()).atualiza(any(Leilao.class));
+        verify(emailMock, never()).envia(any(Leilao.class));
+    }
+	
+	@Test
+    public void emailNaoDeveSerEnviadoQuandoDaoJogarExcecao() {
+		when(daoMock.correntes()).thenReturn(Arrays.asList(leilaoCarroSemanaPassada));
+		doThrow(new RuntimeException()).when(daoMock).atualiza(any(Leilao.class));
+        encerrador.encerra();
+
+        assertEquals(0, encerrador.getTotalEncerrados());
+        assertFalse(leilaoCarroSemanaPassada.isEncerrado());
+        verify(daoMock, times(1)).atualiza(any(Leilao.class));
+        verify(emailMock, never()).envia(any(Leilao.class));
+	}
+	
+	@Test
+    public void deveContinuarExecucaoMesmoQuandoDAOJogaExcecao() {
+		when(daoMock.correntes()).thenReturn(Arrays.asList(leilaoCarroSemanaPassada, leilaoGeladeiraSemanaPassada));
+		doThrow(new RuntimeException()).when(daoMock).atualiza(leilaoCarroSemanaPassada);
+        encerrador.encerra();
+
+        assertEquals(1, encerrador.getTotalEncerrados());
+        assertFalse(leilaoCarroSemanaPassada.isEncerrado());
+        assertTrue(leilaoGeladeiraSemanaPassada.isEncerrado());
+        verify(daoMock, times(2)).atualiza(any(Leilao.class));
+        verify(emailMock, times(1)).envia(any(Leilao.class));
+	}
+	
+	@Test
+    public void deveContinuarExecucaoMesmoQuandoEmailJogaExcecao() {
+		when(daoMock.correntes()).thenReturn(Arrays.asList(leilaoCarroSemanaPassada, leilaoGeladeiraSemanaPassada));
+		doThrow(new NullPointerException()).when(emailMock).envia(leilaoCarroSemanaPassada);
+        encerrador.encerra();
+
+        assertEquals(2, encerrador.getTotalEncerrados());
+        assertTrue(leilaoCarroSemanaPassada.isEncerrado());
+        assertTrue(leilaoGeladeiraSemanaPassada.isEncerrado());
+        verify(daoMock, times(2)).atualiza(any(Leilao.class));
+        verify(emailMock, times(2)).envia(any(Leilao.class));
 	}
 	
 }

@@ -43,7 +43,7 @@ public class CriadorDeLeilao {
 	public Leilao constroi() {
 		Leilao leilao = new Leilao(descricao, data);
 		for(Lance lanceDado : lances) leilao.propoe(lanceDado);
-		if(encerrado) leilao.encerra();
+		leilao.setEncerrado(encerrado);
 				
 		return leilao;
 	}

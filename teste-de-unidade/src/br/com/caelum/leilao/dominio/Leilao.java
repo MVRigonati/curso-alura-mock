@@ -57,8 +57,8 @@ public class Leilao {
 		return (Calendar) data.clone();
 	}
 
-	public void encerra() {
-		this.encerrado = true;
+	public void setEncerrado(final boolean encerrado) {
+		this.encerrado = encerrado;
 	}
 	
 	public boolean isEncerrado() {
