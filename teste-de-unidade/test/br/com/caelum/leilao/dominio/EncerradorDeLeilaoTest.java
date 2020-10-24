@@ -4,8 +4,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -14,11 +15,14 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.logging.Logger;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 
 import br.com.caelum.leilao.builder.CriadorDeLeilao;
 import br.com.caelum.leilao.infra.dao.RepositorioDeLeiloes;
@@ -29,16 +33,22 @@ public class EncerradorDeLeilaoTest {
 	
 	private Leilao leilaoCarroSemanaPassada;
 	private Leilao leilaoGeladeiraSemanaPassada;
-	
 	private Leilao leilaoCarroOntem;
 	private Leilao leilaoGeladeiraOntem;
 	
-	private RepositorioDeLeiloes daoMock;
-	private EnviadorDeEmail emailMock;
 	private EncerradorDeLeilao encerrador;
+	
+	@Mock
+	private RepositorioDeLeiloes daoMock;
+	@Mock
+	private EnviadorDeEmail emailMock;
+	@Mock
+	private Logger log;
 	
 	@Before
 	public void before() {
+		MockitoAnnotations.initMocks(this);
+
 		final Calendar semanaPassada = Calendar.getInstance();
 		semanaPassada.add(Calendar.DAY_OF_MONTH, -7);
 		final Calendar ontem = Calendar.getInstance();
@@ -54,9 +64,10 @@ public class EncerradorDeLeilaoTest {
 		leilaoGeladeiraOntem = criadorDeLeilao
 				.para("L4").naData(ontem).constroi();
 		
-		daoMock = mock(RepositorioDeLeiloes.class);
-		emailMock = mock(EnviadorDeEmail.class);
-		encerrador = new EncerradorDeLeilao(daoMock, emailMock);
+		doNothing().when(log).severe(anyString());
+		doNothing().when(log).warning(anyString());
+		
+		encerrador = new EncerradorDeLeilao(daoMock, emailMock, log);
 	}
 	
 	@Test

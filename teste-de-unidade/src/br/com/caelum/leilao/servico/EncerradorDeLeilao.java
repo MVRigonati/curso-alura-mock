@@ -2,6 +2,7 @@ package br.com.caelum.leilao.servico;
 
 import java.util.Calendar;
 import java.util.List;
+import java.util.logging.Logger;
 
 import br.com.caelum.leilao.dominio.Leilao;
 import br.com.caelum.leilao.infra.dao.RepositorioDeLeiloes;
@@ -10,12 +11,14 @@ import br.com.caelum.leilao.infra.email.EnviadorDeEmail;
 public class EncerradorDeLeilao {
 
 	private int total = 0;
-	private EnviadorDeEmail email;
+	private final Logger log;
+	private final EnviadorDeEmail email;
 	private final RepositorioDeLeiloes dao;
 	
-	public EncerradorDeLeilao(final RepositorioDeLeiloes dao, final EnviadorDeEmail carteiro) {
+	public EncerradorDeLeilao(final RepositorioDeLeiloes dao, final EnviadorDeEmail carteiro, final Logger log) {
 		this.dao = dao;
 		this.email = carteiro;
+		this.log = log;
 	}
 
 	public void encerra() {
@@ -31,11 +34,11 @@ public class EncerradorDeLeilao {
 				}
 			} catch (NullPointerException ex) {
 				// Simulando um erro que aconteceria SOMENTE ao executar enviador de email
-				ex.printStackTrace();
+				log.severe(ex.toString());
 			} catch (RuntimeException ex) {
 				// Simulando um erro que aconteceria SOMENTE ao executar atualizacao no dao 
 				leilao.setEncerrado(false);
-				ex.printStackTrace();
+				log.warning(ex.toString());
 			}
 		}
 	}
